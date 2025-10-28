@@ -273,26 +273,67 @@ if(chkVoronoiGlobal.checked && jugadores.length > 1){
   }
 }
 
-// --- Eventos ---
-canvas.addEventListener('mousedown', e=>{
-  const {offsetX, offsetY} = e;
-  jugadorMovido = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
-  if(jugadorMovido) arrastrando=true;
-});
+// --- Variables arrastrar y doble tap ---
+//let jugadorMovido = null;
+//let arrastrando = false;
+let lastTap = 0;
 
-canvas.addEventListener('mousemove', e=>{
-  if(arrastrando && jugadorMovido){
-    jugadorMovido.x = e.offsetX;
-    jugadorMovido.y = e.offsetY;
-    dibujar();
+// --- Función para obtener posición (mouse o touch) ---
+function obtenerPosicion(e){
+  if(e.touches && e.touches.length>0){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      offsetX: e.touches[0].clientX - rect.left,
+      offsetY: e.touches[0].clientY - rect.top
+    };
+  } else {
+    return { offsetX: e.offsetX, offsetY: e.offsetY };
   }
-});
+}
 
-canvas.addEventListener('mouseup', ()=>{ arrastrando=false; jugadorMovido=null; });
+// --- Funciones de arrastre ---
+function iniciarArrastre(e){
+  const {offsetX, offsetY} = obtenerPosicion(e);
+  jugadorMovido = jugadores.find(j => Math.hypot(j.x-offsetX, j.y-offsetY) < 12);
+  if(jugadorMovido) arrastrando = true;
+  e.preventDefault();
+}
 
+function moverJugador(e){
+  if(!arrastrando || !jugadorMovido) return;
+  const {offsetX, offsetY} = obtenerPosicion(e);
+  jugadorMovido.x = offsetX;
+  jugadorMovido.y = offsetY;
+  dibujar();
+  e.preventDefault();
+}
+
+function soltarJugador(e){
+  arrastrando = false;
+  jugadorMovido = null;
+  e.preventDefault();
+}
+
+// --- Función agregar jugador ---
+function agregarJugador(e){
+  const {offsetX, offsetY} = obtenerPosicion(e);
+  const nuevo = {
+    nombre: `Jugador ${jugadores.length+1}`,
+    x: offsetX,
+    y: offsetY,
+    color: colorAleatorio()
+  };
+  jugadores.push(nuevo);
+  dibujar();
+}
+
+// --- Eventos mouse ---
+canvas.addEventListener('mousedown', iniciarArrastre);
+canvas.addEventListener('mousemove', moverJugador);
+canvas.addEventListener('mouseup', soltarJugador);
 canvas.addEventListener('click', e=>{
   if(arrastrando) return;
-  const {offsetX, offsetY} = e;
+  const {offsetX, offsetY} = obtenerPosicion(e);
   const j = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
   if(j){
     if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
@@ -300,16 +341,10 @@ canvas.addEventListener('click', e=>{
     dibujar();
   }
 });
-
-canvas.addEventListener('dblclick', e=>{
-  const nuevo = {nombre:`Jugador ${jugadores.length+1}`, x:e.offsetX, y:e.offsetY, color:colorAleatorio()};
-  jugadores.push(nuevo);
-  dibujar();
-});
-
+canvas.addEventListener('dblclick', agregarJugador);
 canvas.addEventListener('contextmenu', e=>{
   e.preventDefault();
-  const {offsetX, offsetY} = e;
+  const {offsetX, offsetY} = obtenerPosicion(e);
   const idx = jugadores.findIndex(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
   if(idx>=0){
     jugadores.splice(idx,1);
@@ -318,6 +353,68 @@ canvas.addEventListener('contextmenu', e=>{
   }
 });
 
+// --- Eventos touch (móviles) ---
+canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
+canvas.addEventListener('touchmove', moverJugador, {passive:false});
+canvas.addEventListener('touchend', e=>{
+  soltarJugador(e);
+  const currentTime = new Date().getTime();
+  const tapLength = currentTime - lastTap;
+  if(tapLength < 300 && tapLength > 0){
+    // Doble tap detectado
+    agregarJugador(e);
+    e.preventDefault();
+  }
+  lastTap = currentTime;
+}, {passive:false});
+
+//// --- Eventos ---
+//canvas.addEventListener('mousedown', e=>{
+//  const {offsetX, offsetY} = e;
+//  jugadorMovido = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
+//  if(jugadorMovido) arrastrando=true;
+//});
+//
+//canvas.addEventListener('mousemove', e=>{
+//  if(arrastrando && jugadorMovido){
+//    jugadorMovido.x = e.offsetX;
+//    jugadorMovido.y = e.offsetY;
+//    dibujar();
+//  }
+//});
+//
+//canvas.addEventListener('mouseup', ()=>{ arrastrando=false; jugadorMovido=null; });
+//
+//canvas.addEventListener('click', e=>{
+//  if(arrastrando) return;
+//  const {offsetX, offsetY} = e;
+//  const j = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
+//  if(j){
+//    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
+//    else if(seleccionados.length<3) seleccionados.push(j);
+//    dibujar();
+//  }
+//});
+//
+//canvas.addEventListener('dblclick', e=>{
+//  const nuevo = {nombre:`Jugador ${jugadores.length+1}`, x:e.offsetX, y:e.offsetY, color:colorAleatorio()};
+//  jugadores.push(nuevo);
+//  dibujar();
+//});
+//
+//canvas.addEventListener('contextmenu', e=>{
+//  e.preventDefault();
+//  const {offsetX, offsetY} = e;
+//  const idx = jugadores.findIndex(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
+//  if(idx>=0){
+//    jugadores.splice(idx,1);
+//    seleccionados = seleccionados.filter(s=>jugadores.includes(s));
+//    dibujar();
+//  }
+//});
+
+
+// --- Botones y checkboxes ---
 btnLimpiar.addEventListener('click', ()=>{ seleccionados=[]; dibujar(); });
 [chkUnionesTodos, chkVoronoiTodos, chkVoronoiGlobal, chkSeleccionados, chkNombres].forEach(chk=>chk.addEventListener('change', dibujar));
 
