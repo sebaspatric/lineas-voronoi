@@ -311,16 +311,37 @@ function moverJugador(e){
 function soltarJugador(e){
   arrastrando = false;
   jugadorMovido = null;
-  e.preventDefault();
+  //e.preventDefault();
+}
+
+// --- Seleccionar jugador ---
+function seleccionarJugador(x, y){
+  const j = jugadores.find(j=>Math.hypot(j.x-x,j.y-y)<12);
+  if(j){
+    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
+    else if(seleccionados.length<3) seleccionados.push(j);
+    dibujar();
+  }
 }
 
 // --- Función agregar jugador ---
-function agregarJugador(e){
-  const {offsetX, offsetY} = obtenerPosicion(e);
+//function agregarJugador(e){
+//  const {offsetX, offsetY} = obtenerPosicion(e);
+//  const nuevo = {
+//    nombre: `Jugador ${jugadores.length+1}`,
+//    x: offsetX,
+//    y: offsetY,
+//    color: colorAleatorio()
+//  };
+//  jugadores.push(nuevo);
+//  dibujar();
+//}
+// --- Agregar jugador ---
+function agregarJugador(x, y){
   const nuevo = {
     nombre: `Jugador ${jugadores.length+1}`,
-    x: offsetX,
-    y: offsetY,
+    x: x,
+    y: y,
     color: colorAleatorio()
   };
   jugadores.push(nuevo);
@@ -330,7 +351,16 @@ function agregarJugador(e){
 // --- Eventos mouse ---
 canvas.addEventListener('mousedown', iniciarArrastre);
 canvas.addEventListener('mousemove', moverJugador);
-canvas.addEventListener('mouseup', soltarJugador);
+//canvas.addEventListener('mouseup', soltarJugador);
+canvas.addEventListener('mouseup', e=>{
+  if(!arrastrando){
+    const {offsetX, offsetY} = obtenerPosicion(e);
+    seleccionarJugador(offsetX, offsetY);
+  }
+  soltarJugador(e);
+});
+
+
 canvas.addEventListener('click', e=>{
   if(arrastrando) return;
   const {offsetX, offsetY} = obtenerPosicion(e);
@@ -342,6 +372,12 @@ canvas.addEventListener('click', e=>{
   }
 });
 canvas.addEventListener('dblclick', agregarJugador);
+
+canvas.addEventListener('dblclick', e=>{
+  const {offsetX, offsetY} = obtenerPosicion(e);
+  agregarJugador(offsetX, offsetY);
+});
+
 canvas.addEventListener('contextmenu', e=>{
   e.preventDefault();
   const {offsetX, offsetY} = obtenerPosicion(e);
@@ -356,17 +392,52 @@ canvas.addEventListener('contextmenu', e=>{
 // --- Eventos touch (móviles) ---
 canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
 canvas.addEventListener('touchmove', moverJugador, {passive:false});
+//canvas.addEventListener('touchend', e=>{
+//  soltarJugador(e);
+//  const currentTime = new Date().getTime();
+//  const tapLength = currentTime - lastTap;
+//  if(tapLength < 300 && tapLength > 0){
+//    // Doble tap detectado
+//    agregarJugador(e);
+//    e.preventDefault();
+//  }
+//  lastTap = currentTime;
+//}, {passive:false});
+
+
 canvas.addEventListener('touchend', e=>{
-  soltarJugador(e);
-  const currentTime = new Date().getTime();
-  const tapLength = currentTime - lastTap;
-  if(tapLength < 300 && tapLength > 0){
-    // Doble tap detectado
-    agregarJugador(e);
-    e.preventDefault();
+  const {offsetX, offsetY} = obtenerPosicion(e);
+  
+  if(!arrastrando){
+    // Selección simple
+    seleccionarJugador(offsetX, offsetY);
+
+    // Doble tap
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    if(tapLength < 300 && tapLength > 0){
+      agregarJugador(offsetX, offsetY);
+      e.preventDefault();
+    }
+    lastTap = currentTime;
   }
-  lastTap = currentTime;
+  
+  soltarJugador(e);
 }, {passive:false});
+
+// --- Botones y checkboxes ---
+btnLimpiar.addEventListener('click', ()=>{ seleccionados=[]; dibujar(); });
+[chkUnionesTodos, chkVoronoiTodos, chkVoronoiGlobal, chkSeleccionados, chkNombres].forEach(chk=>chk.addEventListener('change', dibujar));
+
+function colorAleatorio(){
+  const colores = ['blue','red','green','orange','purple','cyan','magenta','brown'];
+  return colores[Math.floor(Math.random()*colores.length)];
+}
+const chkIncentro = document.getElementById('mostrarIncentro');
+chkIncentro.addEventListener('change', dibujar);
+
+// --- Inicializar ---
+dibujar();
 
 //// --- Eventos ---
 //canvas.addEventListener('mousedown', e=>{
@@ -412,18 +483,3 @@ canvas.addEventListener('touchend', e=>{
 //    dibujar();
 //  }
 //});
-
-
-// --- Botones y checkboxes ---
-btnLimpiar.addEventListener('click', ()=>{ seleccionados=[]; dibujar(); });
-[chkUnionesTodos, chkVoronoiTodos, chkVoronoiGlobal, chkSeleccionados, chkNombres].forEach(chk=>chk.addEventListener('change', dibujar));
-
-function colorAleatorio(){
-  const colores = ['blue','red','green','orange','purple','cyan','magenta','brown'];
-  return colores[Math.floor(Math.random()*colores.length)];
-}
-const chkIncentro = document.getElementById('mostrarIncentro');
-chkIncentro.addEventListener('change', dibujar);
-
-// --- Inicializar ---
-dibujar();
