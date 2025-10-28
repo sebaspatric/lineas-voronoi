@@ -415,12 +415,15 @@ function handlePointerEnd(e) {
 
   if (!arrastrando) {
     // click o tap simple
-    seleccionarJugador(offsetX, offsetY);
+    //seleccionarJugador(offsetX, offsetY);
+    const currentTime = Date.now();
 
     // doble clic o doble tap
-    const currentTime = Date.now();
+    //const currentTime = Date.now();
     if (currentTime - lastTap < 300) {
       agregarJugador(offsetX, offsetY);
+    } else {
+      seleccionarJugador(offsetX, offsetY);
     }
     lastTap = currentTime;
   }
