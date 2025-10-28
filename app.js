@@ -458,6 +458,7 @@ canvas.addEventListener('click', e=>{
     dibujar();
   }
 });
+
 //canvas.addEventListener('dblclick', agregarJugador);
 //
 //canvas.addEventListener('dblclick', e=>{
