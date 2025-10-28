@@ -279,25 +279,55 @@ if(chkVoronoiGlobal.checked && jugadores.length > 1){
 let lastTap = 0;
 
 // --- Función para obtener posición (mouse o touch) ---
-function obtenerPosicion(e){
-  if(e.touches && e.touches.length>0){
-    const rect = canvas.getBoundingClientRect();
+//function obtenerPosicion(e){
+//  if(e.touches && e.touches.length>0){
+//    const rect = canvas.getBoundingClientRect();
+//    return {
+//      offsetX: e.touches[0].clientX - rect.left,
+//      offsetY: e.touches[0].clientY - rect.top
+//    };
+//  } else {
+//    return { offsetX: e.offsetX, offsetY: e.offsetY };
+//  }
+//}
+// --- Obtener posición del evento ---
+function obtenerPosicion(e) {
+  const rect = canvas.getBoundingClientRect();
+  if (e.touches && e.touches.length > 0) {
     return {
       offsetX: e.touches[0].clientX - rect.left,
       offsetY: e.touches[0].clientY - rect.top
     };
+  } else if (e.changedTouches && e.changedTouches.length > 0) {
+    return {
+      offsetX: e.changedTouches[0].clientX - rect.left,
+      offsetY: e.changedTouches[0].clientY - rect.top
+    };
   } else {
-    return { offsetX: e.offsetX, offsetY: e.offsetY };
+    // fallback para mouse
+    return {
+      offsetX: e.offsetX ?? e.clientX - rect.left,
+      offsetY: e.offsetY ?? e.clientY - rect.top
+    };
   }
 }
 
+
 // --- Funciones de arrastre ---
-function iniciarArrastre(e){
-  const {offsetX, offsetY} = obtenerPosicion(e);
-  jugadorMovido = jugadores.find(j => Math.hypot(j.x-offsetX, j.y-offsetY) < 12);
-  if(jugadorMovido) arrastrando = true;
+//function iniciarArrastre(e){
+//  const {offsetX, offsetY} = obtenerPosicion(e);
+//  jugadorMovido = jugadores.find(j => Math.hypot(j.x-offsetX, j.y-offsetY) < 12);
+//  if(jugadorMovido) arrastrando = true;
+//  e.preventDefault();
+//}
+// --- Arrastre ---
+function iniciarArrastre(e) {
+  const { offsetX, offsetY } = obtenerPosicion(e);
+  jugadorMovido = jugadores.find(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
+  arrastrando = !!jugadorMovido;
   e.preventDefault();
 }
+
 
 function moverJugador(e){
   if(!arrastrando || !jugadorMovido) return;
@@ -315,11 +345,24 @@ function soltarJugador(e){
 }
 
 // --- Seleccionar jugador ---
-function seleccionarJugador(x, y){
-  const j = jugadores.find(j=>Math.hypot(j.x-x,j.y-y)<12);
-  if(j){
-    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
-    else if(seleccionados.length<3) seleccionados.push(j);
+//function seleccionarJugador(x, y){
+//  const j = jugadores.find(j=>Math.hypot(j.x-x,j.y-y)<12);
+//  if(j){
+//    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
+//    else if(seleccionados.length<3) seleccionados.push(j);
+//    dibujar();
+//  }
+//}
+
+// --- Selección ---
+function seleccionarJugador(x, y) {
+  const j = jugadores.find(j => Math.hypot(j.x - x, j.y - y) < 12);
+  if (j) {
+    if (seleccionados.includes(j)) {
+      seleccionados = seleccionados.filter(s => s !== j);
+    } else if (seleccionados.length < 3) {
+      seleccionados.push(j);
+    }
     dibujar();
   }
 }
@@ -348,17 +391,57 @@ function agregarJugador(x, y){
   dibujar();
 }
 
+
+// --- Eventos unificados ---
+//function handlePointerEnd(e){
+//  const {offsetX, offsetY} = obtenerPosicion(e);
+//  
+//  // Selección
+//  if(!arrastrando) seleccionarJugador(offsetX, offsetY);
+//
+//  // Doble tap/doble click
+//  const currentTime = new Date().getTime();
+//  if(currentTime - lastTap < 300){
+//    agregarJugador(offsetX, offsetY);
+//  }
+//  lastTap = currentTime;
+//
+//  soltarJugador(e);
+//}
+
+// --- Fin del clic/tap ---
+function handlePointerEnd(e) {
+  const { offsetX, offsetY } = obtenerPosicion(e);
+
+  if (!arrastrando) {
+    // click o tap simple
+    seleccionarJugador(offsetX, offsetY);
+
+    // doble clic o doble tap
+    const currentTime = Date.now();
+    if (currentTime - lastTap < 300) {
+      agregarJugador(offsetX, offsetY);
+    }
+    lastTap = currentTime;
+  }
+
+  soltarJugador();
+  e.preventDefault();
+}
+
 // --- Eventos mouse ---
 canvas.addEventListener('mousedown', iniciarArrastre);
 canvas.addEventListener('mousemove', moverJugador);
 //canvas.addEventListener('mouseup', soltarJugador);
-canvas.addEventListener('mouseup', e=>{
-  if(!arrastrando){
-    const {offsetX, offsetY} = obtenerPosicion(e);
-    seleccionarJugador(offsetX, offsetY);
-  }
-  soltarJugador(e);
-});
+//canvas.addEventListener('mouseup', e=>{
+//  if(!arrastrando){
+//    const {offsetX, offsetY} = obtenerPosicion(e);
+//    seleccionarJugador(offsetX, offsetY);
+//  }
+//  soltarJugador(e);
+//});
+//
+canvas.addEventListener('mouseup', handlePointerEnd);
 
 
 canvas.addEventListener('click', e=>{
@@ -371,13 +454,19 @@ canvas.addEventListener('click', e=>{
     dibujar();
   }
 });
-canvas.addEventListener('dblclick', agregarJugador);
+//canvas.addEventListener('dblclick', agregarJugador);
+//
+//canvas.addEventListener('dblclick', e=>{
+//  const {offsetX, offsetY} = obtenerPosicion(e);
+//  agregarJugador(offsetX, offsetY);
+//});
 
-canvas.addEventListener('dblclick', e=>{
-  const {offsetX, offsetY} = obtenerPosicion(e);
-  agregarJugador(offsetX, offsetY);
-});
+// --- Touch ---
+canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
+canvas.addEventListener('touchmove', moverJugador, {passive:false});
+canvas.addEventListener('touchend', handlePointerEnd, {passive:false});
 
+// --- Eliminar con clic derecho ---
 canvas.addEventListener('contextmenu', e=>{
   e.preventDefault();
   const {offsetX, offsetY} = obtenerPosicion(e);
@@ -390,8 +479,8 @@ canvas.addEventListener('contextmenu', e=>{
 });
 
 // --- Eventos touch (móviles) ---
-canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
-canvas.addEventListener('touchmove', moverJugador, {passive:false});
+//canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
+//canvas.addEventListener('touchmove', moverJugador, {passive:false});
 //canvas.addEventListener('touchend', e=>{
 //  soltarJugador(e);
 //  const currentTime = new Date().getTime();
@@ -405,25 +494,25 @@ canvas.addEventListener('touchmove', moverJugador, {passive:false});
 //}, {passive:false});
 
 
-canvas.addEventListener('touchend', e=>{
-  const {offsetX, offsetY} = obtenerPosicion(e);
-  
-  if(!arrastrando){
-    // Selección simple
-    seleccionarJugador(offsetX, offsetY);
-
-    // Doble tap
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    if(tapLength < 300 && tapLength > 0){
-      agregarJugador(offsetX, offsetY);
-      e.preventDefault();
-    }
-    lastTap = currentTime;
-  }
-  
-  soltarJugador(e);
-}, {passive:false});
+//canvas.addEventListener('touchend', e=>{
+//  const {offsetX, offsetY} = obtenerPosicion(e);
+//  
+//  if(!arrastrando){
+//    // Selección simple
+//    seleccionarJugador(offsetX, offsetY);
+//
+//    // Doble tap
+//    const currentTime = new Date().getTime();
+//    const tapLength = currentTime - lastTap;
+//    if(tapLength < 300 && tapLength > 0){
+//      agregarJugador(offsetX, offsetY);
+//      e.preventDefault();
+//    }
+//    lastTap = currentTime;
+//  }
+//  
+//  soltarJugador(e);
+//}, {passive:false});
 
 // --- Botones y checkboxes ---
 btnLimpiar.addEventListener('click', ()=>{ seleccionados=[]; dibujar(); });
