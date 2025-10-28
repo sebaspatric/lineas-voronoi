@@ -410,6 +410,7 @@ function agregarJugador(x, y){
 //}
 
 // --- Fin del clic/tap ---
+let touchTimer = null;
 function handlePointerEnd(e) {
   const { offsetX, offsetY } = obtenerPosicion(e);
 
@@ -480,6 +481,27 @@ canvas.addEventListener('contextmenu', e=>{
     dibujar();
   }
 });
+
+canvas.addEventListener('touchstart', e => {
+  const { offsetX, offsetY } = obtenerPosicion(e);
+
+  touchTimer = setTimeout(() => {
+    const idx = jugadores.findIndex(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
+    if (idx >= 0) {
+      jugadores.splice(idx, 1);
+      seleccionados = seleccionados.filter(s => jugadores.includes(s));
+      dibujar();
+    }
+  }, 600); // 0.6 segundos = mantener para eliminar
+
+  iniciarArrastre(e);
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  clearTimeout(touchTimer);
+  handlePointerEnd(e);
+}, { passive: false });
+
 
 // --- Eventos touch (móviles) ---
 //canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
