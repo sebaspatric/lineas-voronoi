@@ -539,8 +539,9 @@ if ("ontouchstart" in window) {
     if (!touchStartPos || !pos) return;
 
     const distancia = Math.hypot(pos.offsetX - touchStartPos.offsetX, pos.offsetY - touchStartPos.offsetY);
+    const umbral = Math.max(2, canvas.width / 300); // dinámico: entre 2 y 4 px aprox.
 
-    if (distancia > 2) {
+    if (distancia > umbral) {
       moved = true;
       clearTimeout(holdTimer); // cancelar eliminación si se mueve
       if (!arrastreIniciado) {
