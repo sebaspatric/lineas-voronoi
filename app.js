@@ -102,6 +102,97 @@ function dibujarIncentro(A,B,C){
   ctx.fill();
 }
 
+function dibujarOrtocentro(A, B, C) {
+  // --- Cálculo del ortocentro mediante ecuaciones generales ---
+
+  // Ecuaciones de los lados (Ax + By + C = 0)
+  const A1 = B.y - C.y;
+  const B1 = C.x - B.x;
+  const C1 = B.x * C.y - C.x * B.y;
+
+  const A2 = A.y - C.y;
+  const B2 = C.x - A.x;
+  const C2 = A.x * C.y - C.x * A.y;
+
+  // Altura desde A (perpendicular a BC)
+  const AA = B1;
+  const BA = -A1;
+  const CA = -(AA * A.x + BA * A.y);
+
+  // Altura desde B (perpendicular a AC)
+  const AB = B2;
+  const BB = -A2;
+  const CB = -(AB * B.x + BB * B.y);
+
+  // Intersección de las dos alturas → ortocentro
+  const det = AA * BB - AB * BA;
+  if (Math.abs(det) < 1e-6) return; // Evita división por cero (triángulo degenerado)
+
+  const Ox = (BB * (-CA) - BA * (-CB)) / det;
+  const Oy = (AA * (-CB) - AB * (-CA)) / det;
+
+  // --- Dibujar las alturas extendidas ---
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 0, 255, 0.6)';
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.5;
+
+  // Dibuja una altura extendida desde un vértice, perpendicular a un lado
+  function dibujarAlturaExtendida(px, py, P1, P2) {
+    // Ecuación del lado base P1P2
+    const A_ = P1.y - P2.y;
+    const B_ = P2.x - P1.x;
+
+    // Ecuación de la altura (perpendicular a P1P2 que pasa por (px, py))
+    const Aalt = B_;
+    const Balt = -A_;
+    const Calt = -(Aalt * px + Balt * py);
+
+    // Dibujar la altura como una línea larga que cruza el canvas
+    const puntos = [];
+    for (let x of [0, canvas.width]) {
+      const y = (-Aalt * x - Calt) / Balt;
+      puntos.push({ x, y });
+    }
+    for (let y of [0, canvas.height]) {
+      const x = (-Balt * y - Calt) / Aalt;
+      puntos.push({ x, y });
+    }
+
+    // Filtra los puntos que están dentro del canvas
+    const dentro = puntos.filter(p =>
+      p.x >= 0 && p.x <= canvas.width && p.y >= 0 && p.y <= canvas.height
+    );
+
+    if (dentro.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(dentro[0].x, dentro[0].y);
+      ctx.lineTo(dentro[1].x, dentro[1].y);
+      ctx.stroke();
+    }
+  }
+
+  // Dibuja las tres alturas extendidas
+  dibujarAlturaExtendida(A.x, A.y, B, C);
+  dibujarAlturaExtendida(B.x, B.y, A, C);
+  dibujarAlturaExtendida(C.x, C.y, A, B);
+
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // --- Dibujar punto del ortocentro ---
+  ctx.beginPath();
+  ctx.arc(Ox, Oy, 5, 0, 2 * Math.PI);
+  ctx.fillStyle = 'blue';
+  ctx.fill();
+
+  // Etiqueta “H”
+  ctx.fillStyle = 'black';
+  ctx.font = '12px Verdana';
+  ctx.fillText('H', Ox + 8, Oy - 8);
+}
+
+
 
 // --- Dibujar todo ---
 function dibujar(){
@@ -219,7 +310,14 @@ function dibujar(){
       // Incentro
       if(chkIncentro.checked){
         dibujarIncentro(seleccionados[0], seleccionados[1], seleccionados[2]);
-    }
+      }
+      // Ortocentro
+      // Ortocentro
+      if (chkOrtocentro.checked) {
+        dibujarOrtocentro(seleccionados[0], seleccionados[1], seleccionados[2]);
+      }
+
+    
     }
 
   }
@@ -539,6 +637,9 @@ function colorAleatorio(){
 }
 const chkIncentro = document.getElementById('mostrarIncentro');
 chkIncentro.addEventListener('change', dibujar);
+
+const chkOrtocentro = document.getElementById('mostrarOrtocentro');
+chkOrtocentro.addEventListener('change', dibujar);
 
 // --- Inicializar ---
 dibujar();
