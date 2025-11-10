@@ -540,7 +540,7 @@ if ("ontouchstart" in window) {
 
     const distancia = Math.hypot(pos.offsetX - touchStartPos.offsetX, pos.offsetY - touchStartPos.offsetY);
 
-    if (distancia > 5) {
+    if (distancia > 2) {
       moved = true;
       clearTimeout(holdTimer); // cancelar eliminación si se mueve
       if (!arrastreIniciado) {
@@ -572,6 +572,8 @@ if ("ontouchstart" in window) {
     }
     soltarJugador();
     touchStartPos = null;    
+    moved = false;
+    arrastreIniciado = false;
   }, { passive: false });
 }
 
