@@ -411,134 +411,158 @@ function agregarJugador(x, y){
 
 // --- Fin del clic/tap ---
 let touchTimer = null;
-function handlePointerEnd(e) {
-  const { offsetX, offsetY } = obtenerPosicion(e);
+let lastTapTime = 0;
+let lastTouchEnd = 0;
+let isTouchDevice = false;
+lastTap = 0;
+let tapTimeout = null;
+//let lastTouchEnd = 0;
+let touchStartPos = null;  // posición inicial del toque
+let holdTimer = null; // 🔥 para detectar toque prolongado
+
+window.addEventListener("touchstart", () => {
+  isTouchDevice = true;
+});
+
+
+function handlePointerEnd(e, pos) {
+ // e.preventDefault();
+ // const pos = e.touchStartPos || obtenerPosicion(e) || { offsetX: 0, offsetY: 0 };
+  //if (!pos) return;
+  const { offsetX, offsetY } = pos || { offsetX: 0, offsetY: 0 };
+  const currentTime = Date.now();
+  const tapDelay = 300;
+
+  // Evita dobles ejecuciones por el sistema
+  //if (e.type === "touchend" && currentTime - lastTouchEnd < 100) // {
+    // e.preventDefault();
+  //  return;
+  //}
+  //lastTouchEnd = currentTime;
+  if (e.type === "touchend" && currentTime - lastTouchEnd < 30) return;
+  lastTouchEnd = currentTime;
+
 
   if (!arrastrando) {
-    // click o tap simple
-    //seleccionarJugador(offsetX, offsetY);
-    const currentTime = Date.now();
-
-    // doble clic o doble tap
-    //const currentTime = Date.now();
-    if (currentTime - lastTap < 300) {
+    if (currentTime - lastTap < tapDelay) {
+      // 🔥 Doble tap → agregar jugador
+      clearTimeout(tapTimeout);
       agregarJugador(offsetX, offsetY);
+      lastTap = 0;
     } else {
-      seleccionarJugador(offsetX, offsetY);
+      // 🔹 Tap simple → seleccionar / deseleccionar
+      clearTimeout(tapTimeout);
+      tapTimeout = setTimeout(() => {
+        const j = jugadores.find(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
+        if (j) {
+          if (seleccionados.includes(j))
+            seleccionados = seleccionados.filter(s => s !== j);
+          else if (seleccionados.length < 3)
+            seleccionados.push(j);
+          dibujar();
+        }
+      }, tapDelay);
     }
-    lastTap = currentTime;
   }
 
   soltarJugador();
-  e.preventDefault();
+  lastTap = currentTime;
+  //e.preventDefault();
 }
 
+
 // --- Eventos mouse ---
-canvas.addEventListener('mousedown', iniciarArrastre);
-canvas.addEventListener('mousemove', moverJugador);
-//canvas.addEventListener('mouseup', soltarJugador);
-//canvas.addEventListener('mouseup', e=>{
-//  if(!arrastrando){
-//    const {offsetX, offsetY} = obtenerPosicion(e);
-//    seleccionarJugador(offsetX, offsetY);
-//  }
-//  soltarJugador(e);
-//});
-//
-canvas.addEventListener('mouseup', handlePointerEnd);
+// --- Eventos MOUSE (solo PC) ---
+// --- PC ---
+if (!("ontouchstart" in window)) {
+  canvas.addEventListener("mousedown", iniciarArrastre);
+  canvas.addEventListener("mousemove", moverJugador);
+  canvas.addEventListener("mouseup", e => {
+    const pos  = obtenerPosicion(e);
+    handlePointerEnd(e, pos);
+  });
 
+canvas.addEventListener('click', e => {
+   if (arrastrando) return;
+   const { offsetX, offsetY } = obtenerPosicion(e);
+   const j = jugadores.find(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
+   if (j) {
+     if (seleccionados.includes(j))
+       seleccionados = seleccionados.filter(s => s !== j);
+     else if (seleccionados.length < 3)
+       seleccionados.push(j);
+     dibujar();
+   }
+ });
 
-canvas.addEventListener('click', e=>{
-  if(arrastrando) return;
-  const {offsetX, offsetY} = obtenerPosicion(e);
-  const j = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
-  if(j){
-    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
-    else if(seleccionados.length<3) seleccionados.push(j);
-    dibujar();
-  }
-});
-
-//canvas.addEventListener('dblclick', agregarJugador);
-//
-//canvas.addEventListener('dblclick', e=>{
-//  const {offsetX, offsetY} = obtenerPosicion(e);
-//  agregarJugador(offsetX, offsetY);
-//});
-
-// --- Touch ---
-canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
-canvas.addEventListener('touchmove', moverJugador, {passive:false});
-canvas.addEventListener('touchend', handlePointerEnd, {passive:false});
-
-// --- Eliminar con clic derecho ---
-canvas.addEventListener('contextmenu', e=>{
+ // --- Eliminar jugador con clic derecho ---
+canvas.addEventListener('contextmenu', e => {
   e.preventDefault();
-  const {offsetX, offsetY} = obtenerPosicion(e);
-  const idx = jugadores.findIndex(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
-  if(idx>=0){
-    jugadores.splice(idx,1);
-    seleccionados = seleccionados.filter(s=>jugadores.includes(s));
+  const { offsetX, offsetY } = obtenerPosicion(e);
+  const idx = jugadores.findIndex(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
+  if (idx >= 0) {
+    jugadores.splice(idx, 1);
+    seleccionados = seleccionados.filter(s => jugadores.includes(s));
     dibujar();
   }
 });
+}
 
-canvas.addEventListener('touchstart', e => {
-  const { offsetX, offsetY } = obtenerPosicion(e);
 
-  touchTimer = setTimeout(() => {
-    const idx = jugadores.findIndex(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
-    if (idx >= 0) {
-      jugadores.splice(idx, 1);
-      seleccionados = seleccionados.filter(s => jugadores.includes(s));
-      dibujar();
+
+// --- Eventos TOUCH (solo móvil/tablet) ---
+// --- MÓVIL / TABLET ---
+if ("ontouchstart" in window) {
+  let moved = false; // para detectar movimiento durante el toque
+  canvas.addEventListener("touchstart", e => {
+    touchStartPos = obtenerPosicion(e);
+    moved = false; // reiniciar moved al iniciar el toque
+    //iniciarArrastre(e);
+
+    // 🔥 Si mantiene el toque más de 600 ms → eliminar jugador
+    holdTimer = setTimeout(() => {
+      const { offsetX, offsetY } = touchStartPos;
+      const idx = jugadores.findIndex(j => Math.hypot(j.x - offsetX, j.y - offsetY) < 12);
+      if (idx >= 0) {
+        jugadores.splice(idx, 1);
+        seleccionados = seleccionados.filter(s => jugadores.includes(s));
+        dibujar();
+      }
+    }, 600);
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", e => {
+    const pos = obtenerPosicion(e);
+    if (!touchStartPos || !pos) return;
+
+    if (Math.hypot(pos.offsetX - touchStartPos.offsetX, pos.offsetY - touchStartPos.offsetY) > 5) {
+      moved = true;
+      clearTimeout(holdTimer); // cancelar eliminación si se mueve
+      iniciarArrastre(e);
+      moverJugador(e);
     }
-  }, 600); // 0.6 segundos = mantener para eliminar
+  }, { passive: false });
 
-  iniciarArrastre(e);
-}, { passive: false });
-
-canvas.addEventListener('touchend', e => {
-  clearTimeout(touchTimer);
-  handlePointerEnd(e);
-}, { passive: false });
-
-
-// --- Eventos touch (móviles) ---
-//canvas.addEventListener('touchstart', iniciarArrastre, {passive:false});
-//canvas.addEventListener('touchmove', moverJugador, {passive:false});
-//canvas.addEventListener('touchend', e=>{
-//  soltarJugador(e);
-//  const currentTime = new Date().getTime();
-//  const tapLength = currentTime - lastTap;
-//  if(tapLength < 300 && tapLength > 0){
-//    // Doble tap detectado
-//    agregarJugador(e);
-//    e.preventDefault();
-//  }
-//  lastTap = currentTime;
-//}, {passive:false});
+  canvas.addEventListener("touchend", e => {
+    //e.touchStartPos = touchStartPos;
+    //handlePointerEnd(e);
+    //soltarJugador();
+    //clearTimeout(holdTimer);
+    //touchStartPos = null;
+    clearTimeout(holdTimer);
+    const pos = obtenerPosicion(e);
+    if (!moved &&pos) {
+      // 🔹 Si no se movió → selección o doble tap
+      handlePointerEnd(e, pos);
+    }
+    soltarJugador();
+    touchStartPos = null;    
+  }, { passive: false });
+}
 
 
-//canvas.addEventListener('touchend', e=>{
-//  const {offsetX, offsetY} = obtenerPosicion(e);
-//  
-//  if(!arrastrando){
-//    // Selección simple
-//    seleccionarJugador(offsetX, offsetY);
-//
-//    // Doble tap
-//    const currentTime = new Date().getTime();
-//    const tapLength = currentTime - lastTap;
-//    if(tapLength < 300 && tapLength > 0){
-//      agregarJugador(offsetX, offsetY);
-//      e.preventDefault();
-//    }
-//    lastTap = currentTime;
-//  }
-//  
-//  soltarJugador(e);
-//}, {passive:false});
+
+
 
 // --- Botones y checkboxes ---
 btnLimpiar.addEventListener('click', ()=>{ seleccionados=[]; dibujar(); });
@@ -554,47 +578,3 @@ chkIncentro.addEventListener('change', dibujar);
 // --- Inicializar ---
 dibujar();
 
-//// --- Eventos ---
-//canvas.addEventListener('mousedown', e=>{
-//  const {offsetX, offsetY} = e;
-//  jugadorMovido = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
-//  if(jugadorMovido) arrastrando=true;
-//});
-//
-//canvas.addEventListener('mousemove', e=>{
-//  if(arrastrando && jugadorMovido){
-//    jugadorMovido.x = e.offsetX;
-//    jugadorMovido.y = e.offsetY;
-//    dibujar();
-//  }
-//});
-//
-//canvas.addEventListener('mouseup', ()=>{ arrastrando=false; jugadorMovido=null; });
-//
-//canvas.addEventListener('click', e=>{
-//  if(arrastrando) return;
-//  const {offsetX, offsetY} = e;
-//  const j = jugadores.find(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
-//  if(j){
-//    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
-//    else if(seleccionados.length<3) seleccionados.push(j);
-//    dibujar();
-//  }
-//});
-//
-//canvas.addEventListener('dblclick', e=>{
-//  const nuevo = {nombre:`Jugador ${jugadores.length+1}`, x:e.offsetX, y:e.offsetY, color:colorAleatorio()};
-//  jugadores.push(nuevo);
-//  dibujar();
-//});
-//
-//canvas.addEventListener('contextmenu', e=>{
-//  e.preventDefault();
-//  const {offsetX, offsetY} = e;
-//  const idx = jugadores.findIndex(j=>Math.hypot(j.x-offsetX,j.y-offsetY)<12);
-//  if(idx>=0){
-//    jugadores.splice(idx,1);
-//    seleccionados = seleccionados.filter(s=>jugadores.includes(s));
-//    dibujar();
-//  }
-//});
