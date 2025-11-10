@@ -514,10 +514,13 @@ canvas.addEventListener('contextmenu', e => {
 // --- MÓVIL / TABLET ---
 if ("ontouchstart" in window) {
   let moved = false; // para detectar movimiento durante el toque
+  let arrastreIniciado = false; // 👈 nuevo flag para iniciar arrastre solo si hay movimiento real
+
   canvas.addEventListener("touchstart", e => {
     touchStartPos = obtenerPosicion(e);
     moved = false; // reiniciar moved al iniciar el toque
     //iniciarArrastre(e);
+    arrastreIniciado = false; // reiniciar flag de arrastre
 
     // 🔥 Si mantiene el toque más de 600 ms → eliminar jugador
     holdTimer = setTimeout(() => {
@@ -535,12 +538,24 @@ if ("ontouchstart" in window) {
     const pos = obtenerPosicion(e);
     if (!touchStartPos || !pos) return;
 
-    if (Math.hypot(pos.offsetX - touchStartPos.offsetX, pos.offsetY - touchStartPos.offsetY) > 5) {
+    const distancia = Math.hypot(pos.offsetX - touchStartPos.offsetX, pos.offsetY - touchStartPos.offsetY);
+
+    if (distancia > 5) {
       moved = true;
       clearTimeout(holdTimer); // cancelar eliminación si se mueve
-      iniciarArrastre(e);
+      if (!arrastreIniciado) {
+        iniciarArrastre(e);
+        arrastreIniciado = true; // marcar que el arrastre ha comenzado
+      }
       moverJugador(e);
     }
+
+    //if (Math.hypot(pos.offsetX - touchStartPos.offsetX, pos.offsetY - touchStartPos.offsetY) > 5) {
+     // moved = true;
+     // clearTimeout(holdTimer); // cancelar eliminación si se mueve
+      //iniciarArrastre(e);
+     // moverJugador(e);
+    //}
   }, { passive: false });
 
   canvas.addEventListener("touchend", e => {
