@@ -9,6 +9,15 @@ const chkSeleccionados = document.getElementById('seleccionados');
 const chkNombres = document.getElementById('mostrarNombres');
 const btnLimpiar = document.getElementById('limpiarSeleccion');
 
+
+let mostrarBisectrices = false;
+
+document.getElementById("chkBisectrices").addEventListener("change", e => {
+  mostrarBisectrices = e.target.checked;
+  dibujar();
+});
+
+
 // --- Jugadores iniciales ---
 let jugadores = [
   { nombre: "Jugador 1", x: 200, y: 250, color: 'blue' },
@@ -101,7 +110,7 @@ function dibujarIncentro(A,B,C){
   ctx.fillStyle = 'pink';
   ctx.fill();
 }
-
+/*
 function dibujarOrtocentro(A, B, C) {
   // --- Cálculo del ortocentro mediante ecuaciones generales ---
 
@@ -191,7 +200,125 @@ function dibujarOrtocentro(A, B, C) {
   ctx.font = '12px Verdana';
   ctx.fillText('H', Ox + 8, Oy - 8);
 }
+*/
 
+function calcularOrtocentro(A, B, C) {
+  const A1 = B.y - C.y;
+  const B1 = C.x - B.x;
+  const C1 = B.x * C.y - C.x * B.y;
+
+  const A2 = A.y - C.y;
+  const B2 = C.x - A.x;
+  const C2 = A.x * C.y - C.x * A.y;
+
+  const AA = B1;
+  const BA = -A1;
+  const CA = -(AA * A.x + BA * A.y);
+
+  const AB = B2;
+  const BB = -A2;
+  const CB = -(AB * B.x + BB * B.y);
+
+  const det = AA * BB - AB * BA;
+  if (Math.abs(det) < 1e-6) return null; // Evita división por 0
+
+  const Ox = (BB * (-CA) - BA * (-CB)) / det;
+  const Oy = (AA * (-CB) - AB * (-CA)) / det;
+
+  return { x: Ox, y: Oy };
+}
+
+function dibujarOrtocentro(ortocentro) {
+  if (!ortocentro) return;
+
+  ctx.beginPath();
+  ctx.arc(ortocentro.x, ortocentro.y, 5, 0, 2 * Math.PI);
+  ctx.fillStyle = 'blue';
+  ctx.fill();
+
+  ctx.fillStyle = 'black';
+  ctx.font = '12px Verdana';
+  ctx.fillText('H', ortocentro.x + 8, ortocentro.y - 8);
+}
+
+function dibujarAlturas(A, B, C) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 0, 255, 0.6)';
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.5;
+
+  const dibujarAlturaExtendida = (px, py, P1, P2) => {
+    const A_ = P1.y - P2.y;
+    const B_ = P2.x - P1.x;
+    const Aalt = B_;
+    const Balt = -A_;
+    const Calt = -(Aalt * px + Balt * py);
+    const puntos = [];
+
+    for (let x of [0, canvas.width]) {
+      const y = (-Aalt * x - Calt) / Balt;
+      puntos.push({ x, y });
+    }
+    for (let y of [0, canvas.height]) {
+      const x = (-Balt * y - Calt) / Aalt;
+      puntos.push({ x, y });
+    }
+
+    const dentro = puntos.filter(p =>
+      p.x >= 0 && p.x <= canvas.width && p.y >= 0 && p.y <= canvas.height
+    );
+
+    if (dentro.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(dentro[0].x, dentro[0].y);
+      ctx.lineTo(dentro[1].x, dentro[1].y);
+      ctx.stroke();
+    }
+  };
+
+  dibujarAlturaExtendida(A.x, A.y, B, C);
+  dibujarAlturaExtendida(B.x, B.y, A, C);
+  dibujarAlturaExtendida(C.x, C.y, A, B);
+
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+
+// --- Calcula el punto de la bisectriz interna desde un vértice ---
+function puntoBisectriz(v1, v2, v3) {
+  const b = Math.hypot(v1.x - v3.x, v1.y - v3.y);
+  const c = Math.hypot(v1.x - v2.x, v1.y - v2.y);
+
+  // Punto sobre el lado opuesto hacia donde apunta la bisectriz
+  return {
+    x: (b * v2.x + c * v3.x) / (b + c),
+    y: (b * v2.y + c * v3.y) / (b + c)
+  };
+}
+
+// --- Dibuja las tres bisectrices de un triángulo ---
+function dibujarBisectrices(ctx, A, B, C) {
+  const bA = puntoBisectriz(A, B, C);
+  const bB = puntoBisectriz(B, A, C);
+  const bC = puntoBisectriz(C, A, B);
+
+  ctx.save();
+  ctx.strokeStyle = "pink";
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 2]);
+
+  ctx.beginPath();
+  ctx.moveTo(A.x, A.y);
+  ctx.lineTo(bA.x, bA.y);
+  ctx.moveTo(B.x, B.y);
+  ctx.lineTo(bB.x, bB.y);
+  ctx.moveTo(C.x, C.y);
+  ctx.lineTo(bC.x, bC.y);
+  ctx.stroke();
+
+  ctx.restore();
+}
 
 
 // --- Dibujar todo ---
@@ -313,12 +440,26 @@ function dibujar(){
       }
       // Ortocentro
       // Ortocentro
-      if (chkOrtocentro.checked) {
-        dibujarOrtocentro(seleccionados[0], seleccionados[1], seleccionados[2]);
+      //if (chkOrtocentro.checked) {
+      //  dibujarOrtocentro(seleccionados[0], seleccionados[1], seleccionados[2]);
+      //}
+      if (chkOrtocentro.checked || chkAlturas.checked) {
+      const H = calcularOrtocentro(seleccionados[0], seleccionados[1], seleccionados[2]);
+
+      if (chkAlturas.checked) {
+        dibujarAlturas(seleccionados[0], seleccionados[1], seleccionados[2]);
       }
+
+      if (chkOrtocentro.checked) {
+        dibujarOrtocentro(H);
+      }
+    }
 
     
     }
+
+  
+
 
   }
 // --- Todas las líneas de Voronoi (solo si la casilla está marcada) ---
@@ -369,6 +510,10 @@ if(chkVoronoiGlobal.checked && jugadores.length > 1){
       ctx.fillText(j.nombre,j.x+15,j.y-10);
     }
   }
+  if (mostrarBisectrices && seleccionados.length === 3) {
+  dibujarBisectrices(ctx, ...seleccionados);
+}
+
 }
 
 // --- Variables arrastrar y doble tap ---
@@ -640,6 +785,10 @@ chkIncentro.addEventListener('change', dibujar);
 
 const chkOrtocentro = document.getElementById('mostrarOrtocentro');
 chkOrtocentro.addEventListener('change', dibujar);
+
+const chkAlturas = document.getElementById('mostrarAlturas');
+chkAlturas.addEventListener('change', dibujar);
+
 
 // --- Inicializar ---
 dibujar();
