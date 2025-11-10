@@ -12,7 +12,7 @@ const btnLimpiar = document.getElementById('limpiarSeleccion');
 // --- Jugadores iniciales ---
 let jugadores = [
   { nombre: "Jugador 1", x: 200, y: 250, color: 'blue' },
-  { nombre: "Jugador 2", x: 700, y: 250, color: 'red' },
+  { nombre: "Jugador 2", x: 450, y: 400, color: 'red' },
   { nombre: "Jugador 3", x: 450, y: 100, color: 'green' }
 ];
 
@@ -279,17 +279,7 @@ if(chkVoronoiGlobal.checked && jugadores.length > 1){
 let lastTap = 0;
 
 // --- Función para obtener posición (mouse o touch) ---
-//function obtenerPosicion(e){
-//  if(e.touches && e.touches.length>0){
-//    const rect = canvas.getBoundingClientRect();
-//    return {
-//      offsetX: e.touches[0].clientX - rect.left,
-//      offsetY: e.touches[0].clientY - rect.top
-//    };
-//  } else {
-//    return { offsetX: e.offsetX, offsetY: e.offsetY };
-//  }
-//}
+
 // --- Obtener posición del evento ---
 function obtenerPosicion(e) {
   const rect = canvas.getBoundingClientRect();
@@ -314,12 +304,7 @@ function obtenerPosicion(e) {
 
 
 // --- Funciones de arrastre ---
-//function iniciarArrastre(e){
-//  const {offsetX, offsetY} = obtenerPosicion(e);
-//  jugadorMovido = jugadores.find(j => Math.hypot(j.x-offsetX, j.y-offsetY) < 12);
-//  if(jugadorMovido) arrastrando = true;
-//  e.preventDefault();
-//}
+
 // --- Arrastre ---
 function iniciarArrastre(e) {
   const { offsetX, offsetY } = obtenerPosicion(e);
@@ -345,14 +330,7 @@ function soltarJugador(e){
 }
 
 // --- Seleccionar jugador ---
-//function seleccionarJugador(x, y){
-//  const j = jugadores.find(j=>Math.hypot(j.x-x,j.y-y)<12);
-//  if(j){
-//    if(seleccionados.includes(j)) seleccionados = seleccionados.filter(s=>s!==j);
-//    else if(seleccionados.length<3) seleccionados.push(j);
-//    dibujar();
-//  }
-//}
+
 
 // --- Selección ---
 function seleccionarJugador(x, y) {
@@ -368,17 +346,7 @@ function seleccionarJugador(x, y) {
 }
 
 // --- Función agregar jugador ---
-//function agregarJugador(e){
-//  const {offsetX, offsetY} = obtenerPosicion(e);
-//  const nuevo = {
-//    nombre: `Jugador ${jugadores.length+1}`,
-//    x: offsetX,
-//    y: offsetY,
-//    color: colorAleatorio()
-//  };
-//  jugadores.push(nuevo);
-//  dibujar();
-//}
+
 // --- Agregar jugador ---
 function agregarJugador(x, y){
   const nuevo = {
@@ -393,21 +361,7 @@ function agregarJugador(x, y){
 
 
 // --- Eventos unificados ---
-//function handlePointerEnd(e){
-//  const {offsetX, offsetY} = obtenerPosicion(e);
-//  
-//  // Selección
-//  if(!arrastrando) seleccionarJugador(offsetX, offsetY);
-//
-//  // Doble tap/doble click
-//  const currentTime = new Date().getTime();
-//  if(currentTime - lastTap < 300){
-//    agregarJugador(offsetX, offsetY);
-//  }
-//  lastTap = currentTime;
-//
-//  soltarJugador(e);
-//}
+
 
 // --- Fin del clic/tap ---
 let touchTimer = null;
@@ -434,10 +388,7 @@ function handlePointerEnd(e, pos) {
   const tapDelay = 300;
 
   // Evita dobles ejecuciones por el sistema
-  //if (e.type === "touchend" && currentTime - lastTouchEnd < 100) // {
-    // e.preventDefault();
-  //  return;
-  //}
+
   //lastTouchEnd = currentTime;
   if (e.type === "touchend" && currentTime - lastTouchEnd < 30) return;
   lastTouchEnd = currentTime;
@@ -560,11 +511,7 @@ if ("ontouchstart" in window) {
   }, { passive: false });
 
   canvas.addEventListener("touchend", e => {
-    //e.touchStartPos = touchStartPos;
-    //handlePointerEnd(e);
-    //soltarJugador();
-    //clearTimeout(holdTimer);
-    //touchStartPos = null;
+
     clearTimeout(holdTimer);
     const pos = obtenerPosicion(e);
     if (!moved &&pos) {
